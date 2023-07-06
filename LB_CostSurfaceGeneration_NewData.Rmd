@@ -1,0 +1,888 @@
+---
+title: "Liverpool Bay River Plume Cost Surface Raster Generation"
+author: "Richard Heal"
+date: "17/06/2022"
+output: 
+  html_document:
+    toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+###################################################
+# Load in the rasters into a raster stack
+###################################################
+library(raster)
+library(rgdal)
+library(plotly)
+library(data.table)
+reticulate::py_run_string("import sys")
+
+FUFolder <- "C:\\Users\\rh21\\Documents\\ArcGIS\\Projects\\RiskMapping_NewData_Paper\\Rasters\\ClippedIntpFUIRasters"
+ShapefileFolder <- "./Shapefiles"
+RasterFolder <- "./ForelUle/CostDistanceRasters_NewData"
+MonthsList <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+SaveRasters = FALSE
+SaveRastersPST = TRUE
+
+TimeSeries <- c(2017, 2018, 2019, 2020, 2021)
+
+# Create a seasonal stack for each month
+Jan_Mean_Stack <- stack()
+Feb_Mean_Stack <- stack()
+Mar_Mean_Stack <- stack()
+Apr_Mean_Stack <- stack()
+May_Mean_Stack <- stack()
+Jun_Mean_Stack <- stack()
+Jul_Mean_Stack <- stack()
+Aug_Mean_Stack <- stack()
+Sep_Mean_Stack <- stack()
+Oct_Mean_Stack <- stack()
+Nov_Mean_Stack <- stack()
+Dec_Mean_Stack <- stack()
+
+Jan_Count_Stack <- stack()
+Feb_Count_Stack <- stack()
+Mar_Count_Stack <- stack()
+Apr_Count_Stack <- stack()
+May_Count_Stack <- stack()
+Jun_Count_Stack <- stack()
+Jul_Count_Stack <- stack()
+Aug_Count_Stack <- stack()
+Sep_Count_Stack <- stack()
+Oct_Count_Stack <- stack()
+Nov_Count_Stack <- stack()
+Dec_Count_Stack <- stack()
+
+print("Stacking Rasters for Plume 1 rasters")
+pl1_stem <- "Clp_Plm1_Intp_MedianFUI_"
+cnt_matrix <- matrix(data = c(-128, 0, 0, 0, 22, 1, 22, 129, 0), byrow = TRUE, ncol = 3)
+for (i in 1:length(TimeSeries)){
+  # For each year load in the raster and add to the stack
+  print(i)
+  
+  ####################
+  # Jan
+  ####################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "01.tif")
+  JanRaster1 <- raster(file.path(FUFolder, FileName1))
+  Jan_Mean_Stack <- addLayer(Jan_Mean_Stack, JanRaster1)
+  Jan_Count_Stack <- addLayer(Jan_Count_Stack, reclassify(JanRaster1, cnt_matrix, right = FALSE))
+  ####################
+  # Feb
+  ####################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "02.tif")
+  FebRaster1 <- raster(file.path(FUFolder, FileName1))
+  Feb_Mean_Stack <- addLayer(Feb_Mean_Stack, FebRaster1)
+  
+  
+  ####################
+  # March
+  ####################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "03.tif")
+  MarRaster1 <- raster(file.path(FUFolder, FileName1))
+  Mar_Mean_Stack <- addLayer(Mar_Mean_Stack, MarRaster1)
+  
+  ###########
+  # April
+  ###########
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "04.tif")
+  AprRaster1 <- raster(file.path(FUFolder, FileName1))
+  Apr_Mean_Stack <- addLayer(Apr_Mean_Stack, AprRaster1)
+  
+  ###################
+  # May
+  ##################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "05.tif")
+  MayRaster1 <- raster(file.path(FUFolder, FileName1))
+  May_Mean_Stack <- addLayer(May_Mean_Stack, MayRaster1)
+  
+  ##############################
+  # June
+  ##############################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "06.tif")
+  JunRaster1 <- raster(file.path(FUFolder, FileName1))
+  Jun_Mean_Stack <- addLayer(Jun_Mean_Stack, JunRaster1)
+  #
+  ##########################
+  # July
+  ##########################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "07.tif")
+  JulRaster1 <- raster(file.path(FUFolder, FileName1))
+  Jul_Mean_Stack <- addLayer(Jul_Mean_Stack, JulRaster1)
+  
+  ####################
+  # Aug
+  ####################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "08.tif")
+  AugRaster1 <- raster(file.path(FUFolder, FileName1))
+  Aug_Mean_Stack <- addLayer(Aug_Mean_Stack, AugRaster1)
+  
+  ####################
+  # Sept
+  ####################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "09.tif")
+  SepRaster1 <- raster(file.path(FUFolder, FileName1))
+  Sep_Mean_Stack <- addLayer(Sep_Mean_Stack, SepRaster1)
+  
+  ##############################
+  # Oct
+  ##############################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "10.tif")
+  OctRaster1 <- raster(file.path(FUFolder, FileName1))
+  Oct_Mean_Stack <- addLayer(Oct_Mean_Stack, OctRaster1)
+  
+  ###########################
+  # Nov
+  ###########################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "11.tif")
+  NovRaster1 <- raster(file.path(FUFolder, FileName1))
+  Nov_Mean_Stack <- addLayer(Nov_Mean_Stack, NovRaster1)
+  
+  ###########################
+  # Dec
+  #############################
+  FileName1 <- paste0(pl1_stem, TimeSeries[i], "12.tif")
+  DecRaster1 <- raster(file.path(FUFolder, FileName1))
+  Dec_Mean_Stack <- addLayer(Dec_Mean_Stack, DecRaster1)
+  
+}
+
+# Get the mean value across the time series
+print("Calculating Mean Values")
+# Here the FU values 1-21
+Mean_Jan_Raster <- mean(Jan_Mean_Stack, na.rm = TRUE)
+Mean_Feb_Raster <- mean(Feb_Mean_Stack, na.rm = TRUE)
+Mean_Mar_Raster <- mean(Mar_Mean_Stack, na.rm = TRUE)
+Mean_Apr_Raster <- mean(Apr_Mean_Stack, na.rm = TRUE)
+Mean_May_Raster <- mean(May_Mean_Stack, na.rm = TRUE)
+Mean_Jun_Raster <- mean(Jun_Mean_Stack, na.rm = TRUE)
+Mean_Jul_Raster <- mean(Jul_Mean_Stack, na.rm = TRUE)
+Mean_Aug_Raster <- mean(Aug_Mean_Stack, na.rm = TRUE)
+Mean_Sep_Raster <- mean(Sep_Mean_Stack, na.rm = TRUE)
+Mean_Oct_Raster <- mean(Oct_Mean_Stack, na.rm = TRUE)
+Mean_Nov_Raster <- mean(Nov_Mean_Stack, na.rm = TRUE)
+Mean_Dec_Raster <- mean(Dec_Mean_Stack, na.rm = TRUE)
+
+Mean_Spring_Raster <- mean(Mar_Mean_Stack, Apr_Mean_Stack, May_Mean_Stack, na.rm = TRUE)
+Mean_Summer_Raster <- mean(Jun_Mean_Stack, Jul_Mean_Stack, Aug_Mean_Stack, na.rm = TRUE)
+Mean_Autumn_Raster <- mean(Sep_Mean_Stack, Oct_Mean_Stack, Nov_Mean_Stack, na.rm = TRUE)
+Mean_Winter_Raster <- mean(Dec_Mean_Stack, Jan_Mean_Stack, Feb_Mean_Stack, na.rm = TRUE)
+
+# Output the number of observations across the raster
+Count_Jan_Raster <- calc(Jan_Mean_Stack, )
+Count_Feb_Raster <- mean(Feb_Mean_Stack, na.rm = TRUE)
+Count_Mar_Raster <- mean(Mar_Mean_Stack, na.rm = TRUE)
+Count_Apr_Raster <- mean(Apr_Mean_Stack, na.rm = TRUE)
+Count_May_Raster <- mean(May_Mean_Stack, na.rm = TRUE)
+Count_Jun_Raster <- mean(Jun_Mean_Stack, na.rm = TRUE)
+Count_Jul_Raster <- mean(Jul_Mean_Stack, na.rm = TRUE)
+Count_Aug_Raster <- mean(Aug_Mean_Stack, na.rm = TRUE)
+Count_Sep_Raster <- mean(Sep_Mean_Stack, na.rm = TRUE)
+Count_Oct_Raster <- mean(Oct_Mean_Stack, na.rm = TRUE)
+Count_Nov_Raster <- mean(Nov_Mean_Stack, na.rm = TRUE)
+Count_Dec_Raster <- mean(Dec_Mean_Stack, na.rm = TRUE)
+
+
+# Repeat for plume 2
+# Create a seasonal stack for each month
+Jan_Mean_Stack2 <- stack()
+Feb_Mean_Stack2 <- stack()
+Mar_Mean_Stack2 <- stack()
+Apr_Mean_Stack2 <- stack()
+May_Mean_Stack2 <- stack()
+Jun_Mean_Stack2 <- stack()
+Jul_Mean_Stack2 <- stack()
+Aug_Mean_Stack2 <- stack()
+Sep_Mean_Stack2 <- stack()
+Oct_Mean_Stack2 <- stack()
+Nov_Mean_Stack2 <- stack()
+Dec_Mean_Stack2 <- stack()
+
+print("Stacking Rasters for Plume 2 rasters")
+p2_stem <- "Clp_Plm2_Intp_MedianFUI_"
+for (i in 1:length(TimeSeries)){
+  # For each year load in the raster and add to the stack
+  print(i)
+  
+  ####################
+  # Jan
+  ####################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "01.tif")
+  JanRaster2 <- raster(file.path(FUFolder, FileName2))
+  Jan_Mean_Stack2 <- addLayer(Jan_Mean_Stack2, JanRaster2)
+  
+  ####################
+  # Feb
+  ####################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "02.tif")
+  FebRaster2 <- raster(file.path(FUFolder, FileName2))
+  Feb_Mean_Stack2 <- addLayer(Feb_Mean_Stack2, FebRaster2)
+  
+  
+  ####################
+  # March
+  ####################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "03.tif")
+  MarRaster2 <- raster(file.path(FUFolder, FileName2))
+  Mar_Mean_Stack2 <- addLayer(Mar_Mean_Stack2, MarRaster2)
+  
+  ###########
+  # April
+  ###########
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "04.tif")
+  AprRaster2 <- raster(file.path(FUFolder, FileName2))
+  Apr_Mean_Stack2 <- addLayer(Apr_Mean_Stack2, AprRaster2)
+  
+  ###################
+  # May
+  ##################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "05.tif")
+  MayRaster2 <- raster(file.path(FUFolder, FileName2))
+  May_Mean_Stack2 <- addLayer(May_Mean_Stack2, MayRaster2)
+  
+  ##############################
+  # June
+  ##############################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "06.tif")
+  JunRaster2 <- raster(file.path(FUFolder, FileName2))
+  Jun_Mean_Stack2 <- addLayer(Jun_Mean_Stack2, JunRaster2)
+  #
+  ##########################
+  # July
+  ##########################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "07.tif")
+  JulRaster2 <- raster(file.path(FUFolder, FileName2))
+  Jul_Mean_Stack2 <- addLayer(Jul_Mean_Stack2, JulRaster2)
+  
+  ####################
+  # Aug
+  ####################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "08.tif")
+  AugRaster2 <- raster(file.path(FUFolder, FileName2))
+  Aug_Mean_Stack2 <- addLayer(Aug_Mean_Stack2, AugRaster2)
+  
+  ####################
+  # Sept
+  ####################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "09.tif")
+  SepRaster2 <- raster(file.path(FUFolder, FileName2))
+  Sep_Mean_Stack2 <- addLayer(Sep_Mean_Stack2, SepRaster2)
+  
+  ##############################
+  # Oct
+  ##############################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "10.tif")
+  OctRaster2 <- raster(file.path(FUFolder, FileName2))
+  Oct_Mean_Stack2 <- addLayer(Oct_Mean_Stack2, OctRaster2)
+  
+  ###########################
+  # Nov
+  ###########################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "11.tif")
+  NovRaster2 <- raster(file.path(FUFolder, FileName2))
+  Nov_Mean_Stack2 <- addLayer(Nov_Mean_Stack2, NovRaster2)
+  
+  ###########################
+  # Dec
+  #############################
+  FileName2 <- paste0(p2_stem, TimeSeries[i], "12.tif")
+  DecRaster2 <- raster(file.path(FUFolder, FileName2))
+  Dec_Mean_Stack2 <- addLayer(Dec_Mean_Stack2, DecRaster2)
+  
+}
+
+# Get the mean value across the time series
+print("Calculating Mean Values")
+# Here the FU values 1-21
+Mean_Jan_Raster2 <- mean(Jan_Mean_Stack2, na.rm = TRUE)
+Mean_Feb_Raster2 <- mean(Feb_Mean_Stack2, na.rm = TRUE)
+Mean_Mar_Raster2 <- mean(Mar_Mean_Stack2, na.rm = TRUE)
+Mean_Apr_Raster2 <- mean(Apr_Mean_Stack2, na.rm = TRUE)
+Mean_May_Raster2 <- mean(May_Mean_Stack2, na.rm = TRUE)
+Mean_Jun_Raster2 <- mean(Jun_Mean_Stack2, na.rm = TRUE)
+Mean_Jul_Raster2 <- mean(Jul_Mean_Stack2, na.rm = TRUE)
+Mean_Aug_Raster2 <- mean(Aug_Mean_Stack2, na.rm = TRUE)
+Mean_Sep_Raster2 <- mean(Sep_Mean_Stack2, na.rm = TRUE)
+Mean_Oct_Raster2 <- mean(Oct_Mean_Stack2, na.rm = TRUE)
+Mean_Nov_Raster2 <- mean(Nov_Mean_Stack2, na.rm = TRUE)
+Mean_Dec_Raster2 <- mean(Dec_Mean_Stack2, na.rm = TRUE)
+
+Mean_Spring_Raster2 <- mean(Mar_Mean_Stack2, Apr_Mean_Stack2, May_Mean_Stack2, na.rm = TRUE)
+Mean_Summer_Raster2 <- mean(Jun_Mean_Stack2, Jul_Mean_Stack2, Aug_Mean_Stack2, na.rm = TRUE)
+Mean_Autumn_Raster2 <- mean(Sep_Mean_Stack2, Oct_Mean_Stack2, Nov_Mean_Stack2, na.rm = TRUE)
+Mean_Winter_Raster2 <- mean(Dec_Mean_Stack2, Jan_Mean_Stack2, Feb_Mean_Stack2, na.rm = TRUE)
+
+```
+
+## Overview
+
+This document records the generation of cost surfaces from mean frequency maps for the Liverpool Bay area. The cost rasters are generated using the new data obtained.
+
+## Purpose
+
+The purpose of this document is to record the process adopted to generate mean and most common rasters for use in the linkage between SWAT and Forel-Ule. The requirement is:
+
+ 1. A raster for each month of the year with the mean class value across the 2017 to 2021 period.
+ 2. A raster for each month of the year with the frequency of the most common Forel-Ule class for each cell across the period 2017 to 2020.
+ 3. A raster for each month of the year with the maximum class value observed across the 2017 to 2020 period.
+ 4. A raster for each month of the year with the frequency of the Forel-Ule class exceeding the mean for each cell across the period 2017 to 2020.
+
+The plots show the frequency of the maximum Forel-Ule value, and water quality class (1-4; Citclops) for the period 2017-2020 for Jan to Dec.
+
+### Mean FU class observed in each cell each month
+
+These rasters give the mean FU class value for each cell per month over the period 2017-2021.
+
+
+#### The Mean Forel-Ule class rasters
+
+Here the FU classes rasters mean values are plotted. Here for plume 1.
+
+```{r Plot the mean of FU class rasters - plume 1, results='asis', echo=FALSE}
+plot(Mean_Jan_Raster, main = "Jan - Mean Forel-Ule Value")
+plot(Mean_Feb_Raster, main = "Feb - Mean Forel-Ule Value")
+plot(Mean_Mar_Raster, main = "Mar - Mean Forel-Ule Value")
+plot(Mean_Apr_Raster, main = "Apr - Mean Forel-Ule Value")
+plot(Mean_May_Raster, main = "May - Mean Forel-Ule Value")
+plot(Mean_Jun_Raster, main = "Jun - Mean Forel-Ule Value")
+plot(Mean_Jul_Raster, main = "Jul - Mean Forel-Ule Value")
+plot(Mean_Aug_Raster, main = "Aug - Mean Forel-Ule Value")
+plot(Mean_Sep_Raster, main = "Sep - Mean Forel-Ule Value")
+plot(Mean_Oct_Raster, main = "Oct - Mean Forel-Ule Value")
+plot(Mean_Nov_Raster, main = "Nov - Mean Forel-Ule Value")
+plot(Mean_Dec_Raster, main = "Dec - Mean Forel-Ule Value")
+
+```
+
+And here as seasonal means (these are the mean value of ALL the rasters within that season in the period 2017 to 2021.
+
+```{r Plot the seasonal mean of FU class rasters - plume 1, results='asis', echo=FALSE}
+plot(Mean_Spring_Raster, main = "Spring - Mean Forel-Ule Value")
+plot(Mean_Summer_Raster, main = "Summer - Mean Forel-Ule Value")
+plot(Mean_Autumn_Raster, main = "Autumn - Mean Forel-Ule Value")
+plot(Mean_Winter_Raster, main = "Winter - Mean Forel-Ule Value")
+```
+
+These rasters are saved.
+
+```{r Save the mean rasters - plume 1, results='asis', echo=FALSE}
+if (SaveRasters){
+ # Save the rasters
+  StemMean <- "MeanFUValue_Pl1_"
+  writeRaster(Mean_Jan_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Jan.tif")), overwrite = TRUE)
+  writeRaster(Mean_Feb_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Feb.tif")), overwrite = TRUE)
+  writeRaster(Mean_Mar_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Mar.tif")), overwrite = TRUE)
+  writeRaster(Mean_Apr_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Apr.tif")), overwrite = TRUE)
+  writeRaster(Mean_May_Raster, filename = file.path(RasterFolder, paste0(StemMean, "May.tif")), overwrite = TRUE)
+  writeRaster(Mean_Jun_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Jun.tif")), overwrite = TRUE)
+  writeRaster(Mean_Jul_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Jul.tif")), overwrite = TRUE)
+  writeRaster(Mean_Aug_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Aug.tif")), overwrite = TRUE)
+  writeRaster(Mean_Sep_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Sep.tif")), overwrite = TRUE)
+  writeRaster(Mean_Oct_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Oct.tif")), overwrite = TRUE)
+  writeRaster(Mean_Nov_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Nov.tif")), overwrite = TRUE)
+  writeRaster(Mean_Dec_Raster, filename = file.path(RasterFolder, paste0(StemMean, "Dec.tif")), overwrite = TRUE)
+}
+```
+
+#### The Mean Forel-Ule class rasters - Plume 2
+
+Here the FU classes rasters mean values are plotted. Here for plume 2.
+
+```{r Plot the mean of FU class rasters - plume 2, results='asis', echo=FALSE}
+plot(Mean_Jan_Raster2, main = "Jan - Mean Forel-Ule Value")
+plot(Mean_Feb_Raster2, main = "Feb - Mean Forel-Ule Value")
+plot(Mean_Mar_Raster2, main = "Mar - Mean Forel-Ule Value")
+plot(Mean_Apr_Raster2, main = "Apr - Mean Forel-Ule Value")
+plot(Mean_May_Raster2, main = "May - Mean Forel-Ule Value")
+plot(Mean_Jun_Raster2, main = "Jun - Mean Forel-Ule Value")
+plot(Mean_Jul_Raster2, main = "Jul - Mean Forel-Ule Value")
+plot(Mean_Aug_Raster2, main = "Aug - Mean Forel-Ule Value")
+plot(Mean_Sep_Raster2, main = "Sep - Mean Forel-Ule Value")
+plot(Mean_Oct_Raster2, main = "Oct - Mean Forel-Ule Value")
+plot(Mean_Nov_Raster2, main = "Nov - Mean Forel-Ule Value")
+plot(Mean_Dec_Raster2, main = "Dec - Mean Forel-Ule Value")
+
+```
+
+And here as seasonal means (these are the mean value of ALL the rasters within that season in the period 2017 to 2021.
+
+```{r Plot the seasonal mean of FU class rasters - plume 2, results='asis', echo=FALSE}
+plot(Mean_Spring_Raster2, main = "Spring - Mean Forel-Ule Value")
+plot(Mean_Summer_Raster2, main = "Summer - Mean Forel-Ule Value")
+plot(Mean_Autumn_Raster2, main = "Autumn - Mean Forel-Ule Value")
+plot(Mean_Winter_Raster2, main = "Winter - Mean Forel-Ule Value")
+```
+
+These rasters are saved.
+
+```{r Save the mean rasters - plume 2, results='asis', echo=FALSE}
+if (SaveRasters){
+ # Save the rasters
+  StemMean <- "MeanFUValue_Pl2_"
+  writeRaster(Mean_Jan_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Jan.tif")), overwrite = TRUE)
+  writeRaster(Mean_Feb_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Feb.tif")), overwrite = TRUE)
+  writeRaster(Mean_Mar_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Mar.tif")), overwrite = TRUE)
+  writeRaster(Mean_Apr_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Apr.tif")), overwrite = TRUE)
+  writeRaster(Mean_May_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "May.tif")), overwrite = TRUE)
+  writeRaster(Mean_Jun_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Jun.tif")), overwrite = TRUE)
+  writeRaster(Mean_Jul_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Jul.tif")), overwrite = TRUE)
+  writeRaster(Mean_Aug_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Aug.tif")), overwrite = TRUE)
+  writeRaster(Mean_Sep_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Sep.tif")), overwrite = TRUE)
+  writeRaster(Mean_Oct_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Oct.tif")), overwrite = TRUE)
+  writeRaster(Mean_Nov_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Nov.tif")), overwrite = TRUE)
+  writeRaster(Mean_Dec_Raster2, filename = file.path(RasterFolder, paste0(StemMean, "Dec.tif")), overwrite = TRUE)
+}
+```
+
+```{r Animation of rasters, echo=FALSE, results='asis'}
+# Here we animate the rasters by producing a raster stack
+Mean_FUValue_Stack <- stack()
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Jan_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Feb_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Mar_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Apr_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_May_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Jun_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Jul_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Aug_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Sep_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Oct_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Nov_Raster)
+Mean_FUValue_Stack <- addLayer(Mean_FUValue_Stack, Mean_Dec_Raster)
+names(Mean_FUValue_Stack) <- MonthsList
+raster::animate(Mean_FUValue_Stack, n=1)
+
+library(av)
+AnimatedRasterFolder <- "./ForelUle/AnimatedRasters_NewData"
+
+if (!file.exists(file.path(AnimatedRasterFolder,"Mean_FUValue_Monthly.mp4"))){
+  av_capture_graphics( raster::animate(Mean_FUValue_Stack, n=1), output = file.path(AnimatedRasterFolder,"Mean_FUValue_Monthly.mp4" ), width = 720, height = 480, framerate = 1, vfilter = "null", audio = NULL, verbose = TRUE ) 
+}
+
+```
+
+
+
+*************************************************************************************************
+
+```{r Linking DIN and FUI - new data, include = FALSE}
+##########################################################
+# Here we work out the overlap between the maximum grid
+# values for the rivers
+##########################################################
+
+# This is taken from the processing done for the Fronkova paper
+newData <- read.csv('./WaterQuality/mNCEA_Match_Up_FU_WQ_unit_aoi_20230207_pt.csv')
+
+# Use data table for faster access
+newData <- setDT(newData)
+
+# Get the Liverpool Bay data
+newData <- newData[analysis_aoi == "Liverpool Bay", ]
+# Here we snap the values to the maximum observed
+MaxFUObserved = 21
+
+# Create a localised using the loess function
+# Fit for nitrate+nitrite and for ammonium as these represent DIN
+
+##########################################################
+# Here we work out the overlap between the maximum grid
+# values for the rivers
+
+# Here are the number of unique lat/lons
+noStations <- uniqueN(newData[, .(lat, lon)])
+
+
+# Create a shapefile of the locations of the WQ samples
+library(sf)
+# loc_wq <- newData[parameter == "Nitrate, Filtered as N", .(lat, lon, parameter)]
+#   newData[parameter == "Nitrite +nitrate (umoll-1)" |parameter == "Ammonium (umoll-1)" , .(lat, lon, parameter) ]
+# loc_wq[parameter == "Nitrite +nitrate (umoll-1)" , parameter := "Nitrate/Nitrite"]
+# loc_wq[parameter == "Ammonium (umoll-1)" , parameter := "Ammonium"]
+# loc_wq_sf <- st_as_sf(loc_wq, coords = c("lon", "lat"), crs = 4326)
+
+# Save the data as a shapefile
+# st_write(loc_wq_sf,
+#          ".\\WaterQuality\\NewData_DIN_WQ_Locations.shp", delete_layer = TRUE)
+
+# Create a localised using the loess function
+# Fit for nitrate+nitrite and for ammonium as these represent DIN
+# Subset to nitrate/nitrite
+new_NN_LB <- newData[parameter_group == "NOx", ]
+new_LocFit_NN_LB <- loess(value_mean~fu_mean_1x1, new_NN_LB, na.action = na.omit,
+                   control = loess.control(surface = "direct"))
+new_predNN_LB <- predict(new_LocFit_NN_LB, newdata = seq(1,MaxFUObserved,1), se = TRUE)
+
+# Subset to ammonium
+new_AMM_LB <- newData[parameter_group == "NH4", ]
+new_LocFit_AMM_LB <- loess(value_mean~fu_mean_1x1, new_AMM_LB,
+                   control = loess.control(surface = "direct"))
+new_predAMM_LB <- predict(new_LocFit_AMM_LB, newdata = seq(1,MaxFUObserved,1), se = TRUE)
+
+
+#########################################################
+# Plot the data between 1 and 21
+#########################################################
+library(plotly)
+# Create the FUI scale for the plot
+# Colors from 
+fui_red <- c(33,49,50,75,86,109,105,117,123,125,149,148,165,170,173,168,174,179,175,164,161)
+fui_green <- c(88,109,124,128,143,146,140,158,166,174,182,182,188,184,181,169,159,160,138,105,77)
+fui_blue <- c(188,197,187,160,150,152,134,114,84,56,69,96,118,109,95,101,92,83,68,5,4)
+fui_colors <- data.frame(
+  Y_Value = rep(500,21),
+  FUI_Value = seq(1,21,1),
+  FUI_color = paste0("'rgb(", fui_red, ",", fui_green, ",", fui_blue, ")'"))
+
+fui_shapes <- list()
+for (i in 1:nrow(fui_colors)){
+  fui_shapes[i] = list(
+    list(fillcolor = fui_colors$FUI_color[i], opacity = 0.3, type = "rect",
+                x0 = fui_colors$FUI_Value[i] - 0.5, x1 = fui_colors$FUI_Value[i] + 0.5, 
+                y0 = 0, y1 = 500,
+         line = list(width = 0)))
+}
+
+new_NN_Loess_plot <- plot_ly(data = new_NN_LB, type = 'scatter', mode = 'markers') %>%
+  add_trace(x = ~fu_mean_1x1,
+            y = ~value_mean,
+            mode = 'markers',
+            cliponaxis = FALSE) %>%
+  add_trace(data = new_predNN_LB,
+            y = ~fit,
+            mode = 'lines') %>%
+  layout(showlegend = FALSE,
+        xaxis = list(title = list(text = "Forel-Ule Index Value", font = list(family = 'Arial', size = 18)), 
+                      showline = TRUE, range = c(0.5,21.5),
+                      tickmode = "array", tickvals = seq(1,21,1), showgrid = FALSE,
+                       tickfont = list(family = 'Arial', size = 16)),
+         yaxis = list (title = list(text = "DIN (mg/l)", font = list(family = 'Arial', size = 18)), 
+                       tickfont = list(family = 'Arial', size = 16),
+                       showline = TRUE, showgrid = FALSE, ticks = 'outside', range = c(0,500)),
+         margin = list(b = 80, l = 80, width = 1200, height = 800),
+         shapes = fui_shapes
+         )
+
+fui_red <- c(33,49,50,75,86,109,105,117,123,125,149,148,165,170,173,168,174,179,175,164,161)
+fui_green <- c(88,109,124,128,143,146,140,158,166,174,182,182,188,184,181,169,159,160,138,105,77)
+fui_blue <- c(188,197,187,160,150,152,134,114,84,56,69,96,118,109,95,101,92,83,68,5,4)
+fui_colors <- data.frame(
+  Y_Value = rep(50,21),
+  FUI_Value = seq(1,21,1),
+  FUI_color = paste0("'rgb(", fui_red, ",", fui_green, ",", fui_blue, ")'"))
+
+fui_shapes <- list()
+for (i in 1:nrow(fui_colors)){
+  fui_shapes[i] = list(
+    list(fillcolor = fui_colors$FUI_color[i], opacity = 0.3, type = "rect",
+                x0 = fui_colors$FUI_Value[i] - 0.5, x1 = fui_colors$FUI_Value[i] + 0.5, 
+                y0 = 0, y1 = 50,
+         line = list(width = 0)))
+}
+
+new_AMM_Loess_plot <- plot_ly(data = new_AMM_LB, type = 'scatter', mode = 'markers') %>%
+  add_trace(x = ~fu_mean_1x1,
+            y = ~value_mean,
+            mode = 'markers',
+            cliponaxis = FALSE) %>%
+  add_trace(data = new_predAMM_LB,
+            y = ~fit,
+            mode = 'lines') %>%
+  layout(showlegend = FALSE,
+        xaxis = list(title = list(text = "Forel-Ule Index Value", font = list(family = 'Arial', size = 18)), 
+                      showline = TRUE, range = c(0.5,21.5),
+                      tickmode = "array", tickvals = seq(1,21,1), showgrid = FALSE,
+                       tickfont = list(family = 'Arial', size = 16)),
+         yaxis = list (title = list(text = "Ammonium (mg/l)", font = list(family = 'Arial', size = 18)), 
+                       tickfont = list(family = 'Arial', size = 16), range = c(0,50),
+                       showline = TRUE, showgrid = FALSE, ticks = 'outside'),
+         margin = list(b = 80, l = 80, width = 1200, height = 800),
+         shapes = fui_shapes
+         )
+
+# Save the plot
+save_image(new_NN_Loess_plot, "NewCorrelationFUIDIN_Paper_Fig.jpg", width = 1200, height = 800)
+save_image(new_AMM_Loess_plot, "NewCorrelationFUIAmm_Paper_Fig.jpg", width = 1200, height = 800)
+
+# Add in the open ocean box
+# fui_shapes[22] <- list(fillcolor = 'rgb(120,120,120)', name = "open ocean", opacity = 0.3, type = "rect",
+#                 x0 = 0.5, x1 = 9.5, y0 = 0.1, y1 = 1)
+# Normalise the values - here we add the effect on Nitrate+Nitrite and AMM before normalisation. this is to reduce nutrient specific effects.
+new_normPredTotalDIN_LB <- (new_predNN_LB$fit + new_predAMM_LB$fit) / max(new_predNN_LB$fit + new_predAMM_LB$fit)
+# Invert the values
+new_normPredTotalDIN_LB <- 1 - new_normPredTotalDIN_LB
+# Set open ocean to 0.1
+new_normPredTotalDIN_LB[c(1:8)] <- 0.9
+# Normalise the non-open ocean to between 0.9 and 0.1
+new_normPredTotalDIN_LB[c(9:21)] = (new_normPredTotalDIN_LB[c(9:21)] - min(new_normPredTotalDIN_LB[c(9:21)]))/(max(new_normPredTotalDIN_LB[c(9:21)]) - min(new_normPredTotalDIN_LB[c(9:21)])) * (0.9 - 0.1) + 0.1
+
+# Plot the transfer function
+new_NormCostFunctions_Plot_DIN <- plot_ly(type = 'scatter', mode = "markers+lines") %>%
+  add_trace(name = 'Total DIN',
+            x = seq(1,MaxFUObserved,1),
+            y = new_normPredTotalDIN_LB,
+            cliponaxis = FALSE,
+            showlegend = FALSE,
+            line = list(color = 'rgb(0,0,0)'),
+            marker = list(color = 'rgb(0,0,0)')) %>%
+  layout(xaxis = list(title = list(text = "Forel-Ule Value", font = list(family = 'Arial', size = 18)), 
+                      showline = TRUE, range = c(0.5,21.5),
+                      tickmode = "array", tickvals = seq(1,21,1), showgrid = FALSE,
+                       tickfont = list(family = 'Arial', size = 16)),
+         yaxis = list (title = list(text = "Normalised Cost Value", font = list(family = 'Arial', size = 18)), 
+                       range = c(0,1), 
+                       tickfont = list(family = 'Arial', size = 16),
+                       showline = TRUE, showgrid = FALSE, ticks = 'outside'),
+         margin = list(b = 80, l = 80, width = 1200, height = 800),
+         shapes = fui_shapes
+         )
+
+# Save the plot
+save_image(new_NormCostFunctions_Plot_DIN, "CostFunction_NewData_Paper_Fig.jpg", width = 1200, height = 800)
+
+# Produce a table
+library(kableExtra)
+new_NormCostFunctions_DIN <- kbl(
+  data.frame(
+    FUI = seq(1,21,1),
+    NormCost = round(new_normPredTotalDIN_LB, digits = 2)
+  )) %>%
+    kable_styling('striped')
+
+```
+
+## Cost Functions linking the Forel-Ule class to the presence of DIN
+
+An empirical approach was taken to link the Forel-Ule class to the presence of DIN in the water. The water quality data uwas new data and was used to create a local polynomial regression fit between the Forel-Ule class and the concentration of nitrate, nitrite and ammonium in the water. To do so a fit was performed using the LOESS function for readings for "Nitrate and Nitrite" and for "Ammonium". The polynomial fitting is shown in the figure below. 
+
+### Loess fit for NOx
+ 
+`r new_NN_Loess_plot`
+
+### Loess fit for NH4
+
+`r new_AMM_Loess_plot`
+
+The cost functions were normalised to a 0.1-0.9 scale with 0.1 representing the highest exposure (in both cases class 21).  To calculate the normalised function for DIN, the predicted concentrations for each Forel-Ule class was summed and then normalised against the summed values.
+
+`r new_NormCostFunctions_Plot_DIN`
+
+And here as a table of values:
+
+`r new_NormCostFunctions_DIN`
+
+******************************************************************************************************************************
+### Using the normalised cost values based on primary, secondary and tertiary FUIs
+
+In this section we are using the normalised cost values that are 0.9 for the tertiary waters (FUI 1 to 9), and LOESS correlation prediction for a combination of Nitrate+Nitrite and Ammonium for FUI 10 to 21.
+
+A plot of these cost surfaces is shown below:
+
+```{r Reclassify rasters to create the cost rasters - Primary Waters, echo=FALSE, results='asis'}
+################################################
+# Create the cost distance raster based 
+# on the mean cell value and the cost functions
+#################################################
+MaxFUObserved = 21
+
+# Create the reclassification matrix for DIN using the cost functions
+NormClassMatrix_Prim <- matrix(c(seq(0,(MaxFUObserved),1),  c(seq(1,MaxFUObserved,1), 127), c(new_normPredTotalDIN_LB * 100, NA)), nrow = MaxFUObserved+1, ncol = 3, byrow = FALSE)
+
+#####################################################################################
+# This section is using the one-to-one FUI to DIN Cost Matrix
+#####################################################################################
+# Reclassify the mean rasters
+CostMatrix_Jan_Raster_Pl1 <- reclassify(Mean_Jan_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Feb_Raster_Pl1 <- reclassify(Mean_Feb_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Mar_Raster_Pl1 <- reclassify(Mean_Mar_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Apr_Raster_Pl1 <- reclassify(Mean_Apr_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_May_Raster_Pl1 <- reclassify(Mean_May_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Jun_Raster_Pl1 <- reclassify(Mean_Jun_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Jul_Raster_Pl1 <- reclassify(Mean_Jul_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Aug_Raster_Pl1 <- reclassify(Mean_Aug_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Sep_Raster_Pl1 <- reclassify(Mean_Sep_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Oct_Raster_Pl1 <- reclassify(Mean_Oct_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Nov_Raster_Pl1 <- reclassify(Mean_Nov_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Dec_Raster_Pl1 <- reclassify(Mean_Dec_Raster, NormClassMatrix_Prim, right = TRUE)
+
+# Repeat with seasonal rasters
+CostMatrix_Spring_Raster_Pl1 <- reclassify(Mean_Spring_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Summer_Raster_Pl1 <- reclassify(Mean_Summer_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Autumn_Raster_Pl1 <- reclassify(Mean_Autumn_Raster, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Winter_Raster_Pl1 <- reclassify(Mean_Winter_Raster, NormClassMatrix_Prim, right = TRUE)
+
+# Use focal statistics to fill in gaps
+CostMatrix_Jan_Raster_Pl1 <- raster::focal(CostMatrix_Jan_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Feb_Raster_Pl1 <- raster::focal(CostMatrix_Feb_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Mar_Raster_Pl1 <- raster::focal(CostMatrix_May_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Apr_Raster_Pl1 <- raster::focal(CostMatrix_Apr_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_May_Raster_Pl1 <- raster::focal(CostMatrix_May_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Jun_Raster_Pl1 <- raster::focal(CostMatrix_Jun_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Jul_Raster_Pl1 <- raster::focal(CostMatrix_Jul_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Aug_Raster_Pl1 <- raster::focal(CostMatrix_Aug_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Sep_Raster_Pl1 <- raster::focal(CostMatrix_Sep_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Oct_Raster_Pl1 <- raster::focal(CostMatrix_Oct_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Nov_Raster_Pl1 <- raster::focal(CostMatrix_Nov_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Dec_Raster_Pl1 <- raster::focal(CostMatrix_Dec_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+
+# Use focal statistics to fill in gaps in seasonal rasters
+CostMatrix_Spring_Raster_Pl1 <- raster::focal(CostMatrix_Spring_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Summer_Raster_Pl1 <- raster::focal(CostMatrix_Summer_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Autumn_Raster_Pl1 <- raster::focal(CostMatrix_Autumn_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Winter_Raster_Pl1 <- raster::focal(CostMatrix_Winter_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+
+# Reclassify the mean rasters
+CostMatrix_Jan_Raster_Pl2 <- reclassify(Mean_Jan_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Feb_Raster_Pl2 <- reclassify(Mean_Feb_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Mar_Raster_Pl2 <- reclassify(Mean_Mar_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Apr_Raster_Pl2 <- reclassify(Mean_Apr_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_May_Raster_Pl2 <- reclassify(Mean_May_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Jun_Raster_Pl2 <- reclassify(Mean_Jun_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Jul_Raster_Pl2 <- reclassify(Mean_Jul_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Aug_Raster_Pl2 <- reclassify(Mean_Aug_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Sep_Raster_Pl2 <- reclassify(Mean_Sep_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Oct_Raster_Pl2 <- reclassify(Mean_Oct_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Nov_Raster_Pl2 <- reclassify(Mean_Nov_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Dec_Raster_Pl2 <- reclassify(Mean_Dec_Raster2, NormClassMatrix_Prim, right = TRUE)
+
+# Repeat with seasonal rasters
+CostMatrix_Spring_Raster_Pl2 <- reclassify(Mean_Spring_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Summer_Raster_Pl2 <- reclassify(Mean_Summer_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Autumn_Raster_Pl2 <- reclassify(Mean_Autumn_Raster2, NormClassMatrix_Prim, right = TRUE)
+CostMatrix_Winter_Raster_Pl2 <- reclassify(Mean_Winter_Raster2, NormClassMatrix_Prim, right = TRUE)
+# Use focal statistics to fill in gaps
+CostMatrix_Jan_Raster_Pl2 <- raster::focal(CostMatrix_Jan_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Feb_Raster_Pl2 <- raster::focal(CostMatrix_Feb_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Mar_Raster_Pl2 <- raster::focal(CostMatrix_May_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Apr_Raster_Pl2 <- raster::focal(CostMatrix_Apr_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_May_Raster_Pl2 <- raster::focal(CostMatrix_May_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Jun_Raster_Pl2 <- raster::focal(CostMatrix_Jun_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Jul_Raster_Pl2 <- raster::focal(CostMatrix_Jul_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Aug_Raster_Pl2 <- raster::focal(CostMatrix_Aug_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Sep_Raster_Pl2 <- raster::focal(CostMatrix_Sep_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Oct_Raster_Pl2 <- raster::focal(CostMatrix_Oct_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Nov_Raster_Pl2 <- raster::focal(CostMatrix_Nov_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Dec_Raster_Pl2 <- raster::focal(CostMatrix_Dec_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+
+# Use focal statistics to fill in gaps in seasonal rasters
+CostMatrix_Spring_Raster_Pl2 <- raster::focal(CostMatrix_Spring_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Summer_Raster_Pl2 <- raster::focal(CostMatrix_Summer_Raster_Pl1, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Autumn_Raster_Pl2 <- raster::focal(CostMatrix_Autumn_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+CostMatrix_Winter_Raster_Pl2 <- raster::focal(CostMatrix_Winter_Raster_Pl2, matrix(data = rep(1,9), nrow = 3, ncol = 3), 
+                                         modal, na.rm = TRUE, NAonly = TRUE)
+
+# Plot the cost surfaces
+plot(CostMatrix_Jan_Raster_Pl1, main = "Jan - Cost Surface (Plume 1)")
+plot(CostMatrix_Feb_Raster_Pl1, main = "Feb - Cost Surface (Plume 1)")
+plot(CostMatrix_Mar_Raster_Pl1, main = "Mar - Cost Surface (Plume 1)")
+plot(CostMatrix_Apr_Raster_Pl1, main = "Apr - Cost Surface (Plume 1)")
+plot(CostMatrix_May_Raster_Pl1, main = "May - Cost Surface (Plume 1)")
+plot(CostMatrix_Jun_Raster_Pl1, main = "Jun - Cost Surface (Plume 1)")
+plot(CostMatrix_Jul_Raster_Pl1, main = "Jul - Cost Surface (Plume 1)")
+plot(CostMatrix_Aug_Raster_Pl1, main = "Aug - Cost Surface (Plume 1)")
+plot(CostMatrix_Sep_Raster_Pl1, main = "Sep - Cost Surface (Plume 1)")
+plot(CostMatrix_Oct_Raster_Pl1, main = "Oct - Cost Surface (Plume 1)")
+plot(CostMatrix_Nov_Raster_Pl1, main = "Nov - Cost Surface (Plume 1)")
+plot(CostMatrix_Dec_Raster_Pl1, main = "Dec - Cost Surface (Plume 1)")
+
+# Plot the cost surfaces
+plot(CostMatrix_Jan_Raster_Pl2, main = "Jan - Cost Surface (Plume 2)")
+plot(CostMatrix_Feb_Raster_Pl2, main = "Feb - Cost Surface (Plume 2)")
+plot(CostMatrix_Mar_Raster_Pl2, main = "Mar - Cost Surface (Plume 2)")
+plot(CostMatrix_Apr_Raster_Pl2, main = "Apr - Cost Surface (Plume 2)")
+plot(CostMatrix_May_Raster_Pl2, main = "May - Cost Surface (Plume 2)")
+plot(CostMatrix_Jun_Raster_Pl2, main = "Jun - Cost Surface (Plume 2)")
+plot(CostMatrix_Jul_Raster_Pl2, main = "Jul - Cost Surface (Plume 2)")
+plot(CostMatrix_Aug_Raster_Pl2, main = "Aug - Cost Surface (Plume 2)")
+plot(CostMatrix_Sep_Raster_Pl2, main = "Sep - Cost Surface (Plume 2)")
+plot(CostMatrix_Oct_Raster_Pl2, main = "Oct - Cost Surface (Plume 2)")
+plot(CostMatrix_Nov_Raster_Pl2, main = "Nov - Cost Surface (Plume 2)")
+plot(CostMatrix_Dec_Raster_Pl2, main = "Dec - Cost Surface (Plume 2)")
+
+# Plot the seasonal rasters
+plot(CostMatrix_Spring_Raster_Pl1, main = "Spring - Cost Surface (Plume 1)")
+plot(CostMatrix_Summer_Raster_Pl1, main = "Summer - Cost Surface (Plume 1)")
+plot(CostMatrix_Autumn_Raster_Pl1, main = "Autumn - Cost Surface (Plume 1)")
+plot(CostMatrix_Winter_Raster_Pl1, main = "Winter - Cost Surface (Plume 1)")
+
+plot(CostMatrix_Spring_Raster_Pl2, main = "Spring - Cost Surface (Plume 2)")
+plot(CostMatrix_Summer_Raster_Pl2, main = "Summer - Cost Surface (Plume 2)")
+plot(CostMatrix_Autumn_Raster_Pl2, main = "Autumn - Cost Surface (Plume 2)")
+plot(CostMatrix_Winter_Raster_Pl2, main = "Winter - Cost Surface (Plume 2)")
+
+if (SaveRastersPST){
+  # Save the cost matrices
+  StemCostMatrix <- "CostSurface_EstuaryPST_Pl1_"
+  writeRaster(CostMatrix_Jan_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Jan.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Feb_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Feb.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Mar_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Mar.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Apr_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Apr.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_May_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "May.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Jun_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Jun.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Jul_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Jul.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Aug_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Aug.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Sep_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Sep.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Oct_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Oct.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Nov_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Nov.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Dec_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Dec.tif")), overwrite = TRUE)
+  
+  StemCostMatrix <- "CostSurface_EstuaryPST_Pl2_"
+  writeRaster(CostMatrix_Jan_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Jan.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Feb_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Feb.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Mar_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Mar.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Apr_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Apr.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_May_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "May.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Jun_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Jun.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Jul_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Jul.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Aug_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Aug.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Sep_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Sep.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Oct_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Oct.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Nov_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Nov.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Dec_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Dec.tif")), overwrite = TRUE)
+  
+  StemCostMatrix <- "CostSurface_EstuaryPST_Seasonal_Pl1_"
+  writeRaster(CostMatrix_Spring_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Spring.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Summer_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Summer.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Autumn_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Autumn.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Winter_Raster_Pl1, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Winter.tif")), overwrite = TRUE)
+  
+  StemCostMatrix <- "CostSurface_EstuaryPST_Seasonal_Pl2_"
+  writeRaster(CostMatrix_Spring_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Spring.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Summer_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Summer.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Autumn_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Autumn.tif")), overwrite = TRUE)
+  writeRaster(CostMatrix_Winter_Raster_Pl2, filename = file.path(RasterFolder, paste0(StemCostMatrix, "Winter.tif")), overwrite = TRUE)
+  
+}
+```
